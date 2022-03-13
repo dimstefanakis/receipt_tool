@@ -3,3 +3,4 @@ test.json
 export.csv
 /parsed_receipt_data
 /venv
+/.idea
