@@ -1,5 +1,6 @@
 parsed_receipts.json
 test.json
+spreadsheet.csv
 export.csv
 /parsed_receipt_data
 /venv

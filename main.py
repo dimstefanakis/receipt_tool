@@ -50,6 +50,7 @@ def get_csv_from_export():
             # update list of receipts that have already been parsed
             parsed_receipt = {
                 'id': row['id'],
+                'external_id': image_filename,
                 'submission_time': str(ts)
             }
 
@@ -66,5 +67,61 @@ def get_csv_from_export():
             print(row)
 
 
+def get_data_from_veryfi():
+    with open('parsed_receipts.json') as parsed_receipts:
+        parsed_receipts_list = json.load(parsed_receipts)
+        for receipt in parsed_receipts_list:
+            headers = {
+                'CLIENT-ID': 'vrfdfGFuYPvUX36YzRkDNeRMJINLcm8fDhsnnxs',
+                'AUTHORIZATION': 'apikey jim.productlab:89a124f66f5d471fd0d9f6f24cc7fc70'
+            }
+
+            url = f"https://api.veryfi.com/api/v7/partner/documents/?external_id={receipt['external_id']}"
+            response = requests.get(url, headers=headers)
+
+            data = response.json()
+            print(data)
+
+
+def get_active_veryfi_items():
+    headers = {
+        'CLIENT-ID': 'vrfdfGFuYPvUX36YzRkDNeRMJINLcm8fDhsnnxs',
+        'AUTHORIZATION': 'apikey jim.productlab:89a124f66f5d471fd0d9f6f24cc7fc70'
+    }
+
+    url = f"https://api.veryfi.com/api/v7/partner/documents/?status=active"
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    return data
+
+
+def build_csv():
+    receipts = get_active_veryfi_items()
+    with open('spreadsheet.csv', 'w') as spreadsheet:
+        writer = csv.writer(spreadsheet)
+        writer.writerow(['user_id', 'transaction_date', 'field', 'list'])
+        for receipt in receipts:
+            # external id is of format {user_id}-{submission_id}
+            user_id = receipt['external_id'].split('-')[0]
+            if not user_id:
+                continue
+            transaction_date = receipt['date']
+
+            # write store row
+            vendor = f"{receipt['vendor']['name']}, {receipt['vendor']['address']}".replace('\n', ' ')
+            writer.writerow([user_id, transaction_date, 'Store', vendor])
+
+            # write total row
+            total = receipt['total']
+            writer.writerow([user_id, transaction_date, 'Total', total])
+
+            for item in receipt['line_items']:
+                row_item = f"{item['description']}, {item['quantity']}, {item['total']}".replace('\n', ' ')
+                writer.writerow([user_id, transaction_date, 'Product', row_item])
+
+
 if __name__ == '__main__':
     get_csv_from_export()
+    # get_data_from_veryfi()
+    get_active_veryfi_items()
+    build_csv()
